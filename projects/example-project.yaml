@@ -1,0 +1,57 @@
+id: example-project
+name: 예시 프로젝트
+
+repo:
+  url: /absolute/path/to/project
+  default_branch: main
+  branch_prefix: aiqa/
+
+workspace:
+  keep_success_runs: 10
+  keep_failed_runs: 30
+
+docker:
+  enabled: false
+  compose_files: []
+  preview_service: app
+  preview_container_port: 3000
+  host_bind_ip: "127.0.0.1"
+
+commands:
+  unit_test: "python -m pytest"
+
+ai:
+  planner:
+    command: []
+    timeout_sec: 900
+  plan_reviewer:
+    command: []
+    timeout_sec: 900
+  executor:
+    command: []
+    timeout_sec: 1800
+  reviewer_a:
+    command: []
+    timeout_sec: 900
+
+policy:
+  default_mode: human-reviewed
+  max_inner_gate_fixes: 2
+  max_outer_ai_fixes: 2
+  forbidden_paths:
+    - ".env"
+    - ".env.*"
+    - "secrets/**"
+  high_risk_paths:
+    - "auth/**"
+    - "billing/**"
+    - "payment/**"
+    - "migrations/**"
+    - "infra/**"
+
+publish:
+  mode: patch_only
+  require_qa_approval: false
+  require_human_approval: false
+  deploy_command: ""
+  deploy_timeout_sec: 900
