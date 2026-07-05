@@ -23,7 +23,7 @@ flowchart TB
 ## 1. 대상과 전제
 
 - 호스팅 개발자가 자신의 PC에서 서버를 실행하고, 같은 LAN의 QA 팀원이 브라우저로 접속한다.
-- AI는 로컬에 설치된 AI CLI(Claude Code, Codex 등)를 subprocess로 호출한다. 저장소 코드와 데이터는 PC(LAN)를 벗어나지 않는다.
+- AI는 로컬에 설치된 AI CLI(Claude Code, Codex 등)를 subprocess로 호출한다. 대상 코드와 데이터는 PC(LAN)를 벗어나지 않는다.
 - 한 번에 하나의 run만 실행한다(단일 active run). 추가 요청은 대기한다.
 
 ## 2. 2단계 승인 모델
@@ -86,7 +86,3 @@ flowchart TB
 - FR-L7 보수적 출력: patch/로컬 branch를 기본으로 하고, 사람 승인 없이 출력이 나가지 않는다.
 - FR-L8 감사 추적: 요청·계획·검증·승인·결과를 artifact로 남기고 secret을 redaction한다.
 - FR-L9 보안 가드: 공유 토큰 인증, hard-deny 명령 차단, prompt injection 방어(상세 [04 문서](./04-validation-and-security.md)).
-
-## 7. 기존 로컬 프로토타입과의 관계
-
-저장소의 `devauto` 코드는 이 로컬 버전과 유사한 동작을 이미 일부 구현한 프로토타입입니다. 이 기획서는 그 코드를 사양으로 삼지 않고 리서치 기준으로 재정의하지만, 구현 시 참고할 수 있는 동작 레퍼런스로 둡니다. 기획과 기존 구현이 충돌하면 이 기획서를 기준선으로 갱신할 것을 권장합니다.

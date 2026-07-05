@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TB
-    subgraph S0["0단계 현재 유지·추상화"]
+    subgraph S0["0단계 로컬 경계 정의"]
         E0["실행 백엔드 인터페이스<br/>LocalWorkspace ↔ RemoteSandbox"]
     end
     subgraph S1["1단계 원격 격리 도입"]
@@ -39,10 +39,10 @@ AI 에이전트는 사람 검토 없이 임의 코드를 생성·실행하므로
 
 ## 2. 클라우드 코딩 에이전트의 격리 실태
 
-상용 제품들이 공개한 격리 방식입니다. 공통 패턴은 devauto의 run별 격리 workspace 모델과 같은 방향입니다.
+상용 제품들이 공개한 격리 방식입니다. 공통 패턴은 AI Debug의 run별 격리 workspace 모델과 같은 방향입니다.
 
 - Devin(Cognition): 상태 없는 추론 서비스("Brain")와 코드 실행용 격리 VM("Devbox")을 분리. 세션마다 독립 VM, 멀티테넌트에서 세션별 머신 격리. 엔터프라이즈는 단일 테넌트 VPC 전용 배포.
-- OpenAI Codex cloud/CLI: 공식 문서는 sandboxing, approvals, network controls를 핵심 보안 경계로 설명합니다. setup/agent 단계의 네트워크 통제, 승인 정책, 파일·명령 접근 제한을 운영 정책으로 다룹니다. devauto는 Codex를 사용하더라도 "AI가 통제권을 갖는다"가 아니라 하네스가 sandbox/approval policy를 고정하는 방식이어야 합니다.
+- OpenAI Codex cloud/CLI: 공식 문서는 sandboxing, approvals, network controls를 핵심 보안 경계로 설명합니다. setup/agent 단계의 네트워크 통제, 승인 정책, 파일·명령 접근 제한을 운영 정책으로 다룹니다. AI Debug는 Codex를 사용하더라도 "AI가 통제권을 갖는다"가 아니라 하네스가 sandbox/approval policy를 고정하는 방식이어야 합니다.
 - GitHub Copilot cloud agent: GitHub Actions 기반 ephemeral development environment에서 repository를 research/plan/code하고 branch에 변경을 만듭니다. 공식 문서 기준 사람이 diff를 검토하고 PR을 생성/검토하는 흐름이며, 한 세션 59분 제한, 한 작업당 한 branch/PR 제한이 있습니다. responsible use 문서는 사람 검토·테스트·보안 검증을 요구합니다.
 - Google Jules: 저장소를 격리된 GCP VM에 clone, 작업 후 VM 파기. 빌드·테스트용 네트워크 허용, Environment Snapshot으로 재실행 가속. 기반 GKE Agent Sandbox는 gVisor로 pod 단위 격리.
 
@@ -63,15 +63,15 @@ AI 에이전트는 사람 검토 없이 임의 코드를 생성·실행하므로
 클라우드에서 CLI 대신 API로 직접 호출할 때도 통제권을 유지하는 방법입니다.
 
 - Claude Agent SDK는 Claude Code와 같은 에이전트 루프(컨텍스트 수집 → 도구 호출 → 결과 반영 → 반복)를 프로그래밍 인터페이스로 노출한다. 시스템 프롬프트·허용 도구·hooks·권한 모드를 호출 단위로 통제할 수 있다. "누가 루프를 운전하는가"가 CLI(사람) vs SDK(애플리케이션)의 차이다.
-- harness-in-control 유지(추정 포함): CLI 출력 파싱 의존을 SDK로 바꾸면, devauto의 게이트를 SDK hooks(도구 실행 전 승인)로, sanitized env를 per-query allowed-tools/permission으로 매핑할 수 있다. 에이전트 루프를 호스트가 아니라 샌드박스 내부에서 돌리고, 도구·네트워크 권한을 하네스가 선언적으로 강제하면 API 직접 호출에서도 통제권을 유지한다.
+- harness-in-control 유지(추정 포함): CLI 출력 파싱 의존을 SDK로 바꾸면, AI Debug의 게이트를 SDK hooks(도구 실행 전 승인)로, sanitized env를 per-query allowed-tools/permission으로 매핑할 수 있다. 에이전트 루프를 호스트가 아니라 샌드박스 내부에서 돌리고, 도구·네트워크 권한을 하네스가 선언적으로 강제하면 API 직접 호출에서도 통제권을 유지한다.
 - OpenAI 쪽에서 현재 공식적으로 확인한 핵심은 Codex의 sandbox/approval/network control 모델입니다. Daytona·E2B·Modal·Cloudflare·Vercel 같은 sandbox provider 비교는 OpenAI 공식 지원 목록이 아니라 외부 실행 백엔드 후보로 별도 평가해야 합니다. 하네스가 실행 백엔드를 교체 가능한 플러그인으로 두는 패턴은 유효하지만, 특정 provider 지원 여부는 실제 SDK/벤더 문서로 매번 재확인해야 합니다.
 - OpenHands(MIT)는 append-only 이벤트 스트림을 단일 진실 원천으로 두고 Docker 컨테이너 런타임에서 에이전트 액션을 실행한다. security analyzer를 포함해 참고할 만한 오픈 아키텍처다.
 
-## 5. devauto AI Debug product 아키텍처 제언
+## 5. AI Debug product 아키텍처 제언
 
-단계적 진화 경로입니다. 한 번에 재작성하지 않고 추상화부터 시작합니다.
+단계적 진화 경로입니다. 로컬 실행 경계를 먼저 정의하고, 클라우드 실행 기반을 그 뒤에 붙입니다.
 
-- 0단계(현재 유지·추상화): 실행 백엔드를 인터페이스로 추상화한다(`LocalWorkspace` ↔ `RemoteSandbox`). 현재의 run별 격리 workspace + run branch + sanitized env 모델을 계약으로 굳혀, 이후 원격 구현을 끼워넣을 수 있게 한다.
+- 0단계(로컬 경계 정의): 실행 백엔드를 인터페이스로 추상화한다(`LocalWorkspace` ↔ `RemoteSandbox`). 로컬 run별 격리 workspace + run branch + sanitized env 모델을 계약으로 굳혀, 이후 원격 실행 기반을 끼워넣을 수 있게 한다.
 - 1단계(원격 격리 도입): 직접 Firecracker 오케스트레이션을 짜지 말고 관리형 샌드박스(E2B·Daytona·Modal 또는 Cloudflare/Vercel Sandbox)부터 채택한다. run마다 ephemeral 샌드박스 생성→파기, 기본 차단 egress + 허용목록, 런타임 시크릿 주입. 적대적·신뢰 불가 코드 비중이 커지면 Firecracker/Kata 자가호스팅으로 내려간다(추정: 볼륨이 정당화될 때).
 - 2단계(상태·동시성): SQLite는 로컬 모드 유지, 클라우드는 Postgres shared-schema + `SKIP LOCKED` 잡 큐로 단일 active run 제약을 해제한다. 모든 잡 페이로드에 `tenant_id`를 강제한다. 장기 워크플로가 늘면 Temporal 등 durable orchestration을 도입한다.
 - 3단계(컨트롤 플레인): 인증/RBAC, 테넌트별 시크릿 볼트, 네트워크 세그멘테이션, 감사 로그를 갖춘 멀티테넌트 제어면을 추가한다. 컴퓨트(샌드박스)와 데이터 격리를 분리해 설계한다.
@@ -79,7 +79,7 @@ AI 에이전트는 사람 검토 없이 임의 코드를 생성·실행하므로
 - 보안 게이트(상용 패턴 차용): Codex/Copilot 패턴 — sandbox/approval policy, 네트워크 옵트인 또는 허용목록, 전용 브랜치 격리, 사람 리뷰 게이트, 생성 diff에 CodeQL·secret scan·dependency scan.
 - 성능·비용: 워밍 샌드박스 풀 + 지연 이미지 로딩 + 환경 스냅샷 재사용(Jules·Cloudflare 모델) + active-CPU 과금으로 콜드스타트·동시성 비용을 최적화한다.
 
-핵심 원칙: devauto의 정체성(harness-in-control, 비개발자 가드레일, 단계적 승인)을 클라우드로 옮길 때도 유지하는 것입니다. 실행 환경만 로컬에서 원격 격리로 바뀌고, 통제·검증·승인 레이어는 그대로 남아야 합니다.
+핵심 원칙: AI Debug의 정체성(harness-in-control, 비개발자 가드레일, 단계적 승인)을 클라우드로 옮길 때도 유지하는 것입니다. 실행 환경만 로컬에서 원격 격리로 바뀌고, 통제·검증·승인 레이어는 그대로 남아야 합니다.
 
 ## 출처
 

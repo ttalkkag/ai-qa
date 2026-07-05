@@ -49,6 +49,8 @@ flowchart TB
 
 구현 기본값은 secret, SAST, SCA 범주를 모두 게이트 후보로 두는 것입니다. 구체 도구는 실행 환경과 저장소 언어에 맞춰 선택합니다.
 
+보안 게이트는 silent pass를 허용하지 않습니다. 필수로 설정된 scanner가 없거나 실행 파일을 찾지 못하거나 결과를 파싱할 수 없으면 기본적으로 fail-closed 또는 명시적 escalate로 처리합니다. 프로젝트별로 disable, allowlist, baseline을 허용하더라도 그 사유와 범위는 감사 artifact에 남겨야 합니다. 각 보안 게이트는 raw stdout/stderr뿐 아니라 finding 종류, 심각도, 위치, 판정, suppress 사유를 담은 normalized summary artifact를 남깁니다.
+
 ## 3. AI 생성 코드의 보안 리스크 대응
 
 AI가 만든 코드를 AI가 리뷰하는 구조가 되기 쉬우므로, 결정론적 보안 게이트로 보강합니다(근거: [`research/03`](../research/03-pr-validation-and-security.md)).
@@ -59,7 +61,8 @@ AI가 만든 코드를 AI가 리뷰하는 구조가 되기 쉬우므로, 결정�
 
 ## 4. AI 리뷰 (보조 신호)
 
-- AI 리뷰는 로직·아키텍처 코멘트와 리스크 스코어링을 제공한다. `pass/fix/escalate` 같은 신호를 낼 수 있으나 머지·발행 권한은 없다.
+- AI 리뷰는 로직·아키텍처 코멘트와 리스크 스코어링을 제공한다. `pass/fix/escalate` 같은 표현을 낼 수 있으나 이는 artifact에 남는 의견이며, 단독으로 executor 재실행, terminal stop, 머지·발행 차단을 유발하지 않는다.
+- 상태 전이와 차단은 결정론적 게이트 실패, 정책 위반, scope 위반, 사람 반려처럼 하네스가 검증 가능한 사건만 수행한다. AI 리뷰가 지적한 내용은 사람 승인 화면과 final report의 risk comment로 제공한다.
 - 보안 관련 발견은 결정론적 스캐너 결과와 교차검증한다.
 - 반복 false positive를 줄이기 위해 룰별 과거 판정·프로젝트 컨텍스트를 누적하는 노이즈 억제 계층을 둔다(근거: Semgrep Assistant식 노이즈 필터, [`research/03`](../research/03-pr-validation-and-security.md)).
 - AI가 못 잡는 영역(비즈니스 로직, 아키텍처 적합성, 논리적 인가 결함)이 있으므로 크리티컬 경로는 사람 승인을 유지한다.
@@ -77,6 +80,8 @@ AI 컨텍스트에 PR 본문·이슈·코드 주석 같은 외부 콘텐츠를 �
 - 최소 권한: AI 역할별로 권한을 차등한다. 계획·리뷰 역할은 쓰기 권한 0, 실행 역할만 승인된 범위 내 쓰기.
 - hard-deny: push·deploy·sudo·파괴적 정리·SSH 등 위험 명령은 프로젝트 정책이 덮어써도 항상 차단한다. 명령 비교는 공백 변형도 같은 명령으로 취급한다.
 - 범위 강제: 승인된 계획의 변경 대상 파일 범위를 벗어나면 자동 중단(escalate)한다.
+- Candidate Files가 비어 있거나 `**/*`처럼 지나치게 넓은 범위만 제시된 계획은 자동 승인과 executor grant 대상이 아니다. 계획을 다시 만들거나 개발자 최종 확인으로 올린다.
+- 기본 high-risk 경로는 인증/인가, 결제, 마이그레이션, 인프라, CI/hook, secret/config, 보안 설정, 승인 설정 파일을 포함한다. 이 경로의 변경은 QA-only 흐름으로 진행하지 않는다.
 - secret 위생: 모든 child process를 토큰·시크릿류 환경변수를 제거한 sanitized env로 실행하고, artifact 저장 전 redaction한다. 프로젝트 설정에 inline credential 저장을 거부한다.
 - 자동 머지·자동 배포 금지: 사람 승인 없이 결과가 반영되지 않는다.
 
