@@ -41,7 +41,7 @@ flowchart TB
 6. AI 리뷰가 보조 신호로 코멘트·리스크를 남긴다.
 7. QA가 변경 요약·검증 결과를 보고 1차 확인한다(확인/반려).
 8. 확인되면 전용 branch로 push하고 GitHub/GitLab에 draft PR을 생성한다.
-9. 팀의 리뷰어가 PR을 검토·머지한다. 변경 요청이 오면 후속 작업으로 반영한다.
+9. 팀의 리뷰어가 PR을 검토·머지한다. 변경 요청이 오면 후속 작업으로 반영한다. 리뷰 코멘트는 신뢰 불가 입력으로 취급하고([04 문서](./04-validation-and-security.md)), 후속 작업의 반복 횟수를 제한한다.
 
 ## 4. git 연동과 PR 생성
 
@@ -62,11 +62,12 @@ flowchart TB
 
 - 흐름은 공통입니다. 격리 컨테이너에서 클론 → 전용 branch 생성 → 커밋 → push → PR/MR 생성 API 호출.
 - 플랫폼 차이는 PR/MR 생성 어댑터에서 흡수합니다. 어댑터는 draft 표현, source/base branch 표현, 본문·라벨·리뷰어 지정, self-hosted GitLab URL 차이를 숨깁니다.
+- git 쓰기 자격증명은 AI가 실행되는 컨테이너에 주입하지 않습니다. QA 확인 후 하네스의 별도 push·PR 생성 단계가 단명·최소권한 토큰으로 수행합니다. AI 실행 단계와 출력 단계를 자격증명 경계로 분리해, 오염된 실행 컨텍스트가 push 권한을 얻지 못하게 합니다.
 
 ### 4.3 봇 PR 거버넌스
 
 - 모든 자동 PR은 draft로 생성하고, 식별 가능한 branch 접두사와 AI 생성 라벨을 붙인다.
-- 사람 리뷰 강제는 SaaS 옵션이 아니라 고객 저장소의 branch protection·CODEOWNERS·required reviews에 의존하게 설계한다. 봇을 bypass actor로 넣지 않는다. PR 작성자(봇)는 자기 PR을 승인할 수 없으므로 구조적으로 사람 승인이 강제된다.
+- 사람 리뷰 강제는 SaaS 옵션이 아니라 고객 저장소의 branch protection·CODEOWNERS·required reviews에 의존하게 설계한다. 봇을 bypass actor로 넣지 않는다. 단, 이 강제는 대상 저장소에 required reviews가 설정된 경우에만 성립하므로, 온보딩 시 branch protection·required reviews 설정을 확인하고 미설정 저장소에는 경고하거나 연동을 차단한다.
 - auto-merge는 기본 비활성이며 지원하지 않는다(근거: [`research/03`](../research/03-pr-validation-and-security.md) 자동 머지 금지).
 - 커밋 committer는 SaaS bot 계정으로 두되 PR 본문·커밋에 AI·모델·세션을 투명하게 표기한다. 표기를 임의로 숨기지 않는다.
 
@@ -90,17 +91,17 @@ PR 본문에 다음을 채워 리뷰어가 맥락 없이 봇 PR을 받는 부담
 - 상태 저장: Postgres 기반 tenant 격리 모델. 모든 상태와 작업 페이로드가 tenant 정보를 필수로 갖게 해 백그라운드 작업의 테넌트 누수를 막는다.
 - 작업 큐: Postgres 기반 큐로 시작하고, 내구성·재시도·타임아웃 요구가 늘면 durable orchestration을 검토한다.
 - 비밀 관리: 작업마다 단명·최소권한 토큰을 발급하고, 빌드 이미지에 시크릿을 굽지 않고 런타임 주입한다. 테넌트별 시크릿 볼트, 감사 로그.
-- 네트워크: 기본 전체 차단 → 필요한 대상만 허용. 에이전트 네트워크를 프로덕션·데이터스토어와 분리한다.
+- 네트워크: 기본 전체 차단 → 필요한 대상만 허용. egress 허용목록은 하네스 표준 목록(AI API·git 호스트)과 프로젝트 등록 시 관리자가 선언한 대상(패키지 레지스트리 등)으로 구성하고, 변경은 감사 기록을 남긴다. 에이전트 네트워크를 프로덕션·데이터스토어와 분리한다.
 
 ## 6. 기능 요구사항
 
-- FR-C1 테넌트·프로젝트 관리: 테넌트 관리자가 워크스페이스를 설정하고 git 연동(App 설치/토큰)과 프로젝트를 등록한다.
+- FR-C1 테넌트·프로젝트 관리: 테넌트 관리자가 워크스페이스를 설정하고 git 연동(App 설치/토큰)과 프로젝트를 등록한다. 온보딩 시 대상 저장소의 branch protection·required reviews 설정을 확인한다.
 - FR-C2 요청 수명주기: 요청 → 큐 → 격리 실행 → 검증 → 1차 확인 → PR 생성의 단계를 tenant별로 관리한다.
 - FR-C3 격리 실행(API): AI API를 격리 컨테이너에서 호출하고, 하네스가 도구·승인·네트워크 정책을 선언적으로 통제한다.
 - FR-C4 결정론적 게이트 + 보안 스캔: 로컬과 동일한 검증을 컨테이너 안에서 실행한다(상세 [04 문서](./04-validation-and-security.md)).
 - FR-C5 비개발자 1차 확인: QA가 변경 요약·검증 결과를 확인하면 PR 생성을 트리거한다.
 - FR-C6 PR/MR 생성: GitHub/GitLab 어댑터로 draft PR을 생성하고 추적 본문을 채운다. 최종 승인은 팀 리뷰에 위임한다.
-- FR-C7 멀티테넌시: tenant 격리, 작업 큐, 시크릿 볼트, 감사 로그.
+- FR-C7 멀티테넌시: tenant 격리, 작업 큐, 시크릿 볼트, 감사 로그, 테넌트별 동시 실행 상한·요청 쿼터·비용 상한.
 - FR-C8 보안 가드: egress 통제, hard-deny, prompt injection 방어, 보안 설정 파일 자율 수정 차단(상세 [04 문서](./04-validation-and-security.md)).
 
 ## 7. 구현 결정 게이트
