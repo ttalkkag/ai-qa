@@ -18,18 +18,21 @@
       "Read(**/*.jks)",
       "Read(**/*.keystore)",
       "Read(**/*.tfvars)",
+      "Read(**/*.tfstate)",
+      "Read(**/*.tfstate.*)",
       "Read(**/id_rsa*)",
       "Read(**/id_ed25519*)",
-      "Read(**/.ssh/*)",
-      "Read(**/.aws/*)",
+      "Read(**/.ssh/**)",
+      "Read(**/.aws/**)",
+      "Read(**/.azure/**)",
+      "Read(**/.docker/config.json)",
       "Read(**/credentials.json)",
       "Read(**/.netrc)",
       "Read(**/.npmrc)",
       "Read(**/.git-credentials)",
       "Read(**/.kube/config)",
       "Read(**/.gnupg/**)",
-      "Edit(../**)",
-      "Write(../**)"
+      "Edit(../**)"
     ],
     "defaultMode": "bypassPermissions"
   },
@@ -74,6 +77,17 @@
             "statusMessage": "Checking dependency folder edit"
           }
         ]
+      },
+      {
+        "matcher": "^(Edit|MultiEdit|Write|NotebookEdit|apply_patch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.hooks/block_parent_directory_writes.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking parent directory write"
+          }
+        ]
       }
     ]
   },
@@ -114,7 +128,6 @@
     "serena@claude-plugins-official": false,
     "skill-creator@claude-plugins-official": false,
     "supabase@claude-plugins-official": false,
-    "superpowers@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": false,
     "vercel@claude-plugins-official": true
   },
@@ -130,9 +143,10 @@
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
   "model": "opus",
+  "advisorModel": "opus",
   "effortLevel": "xhigh",
   "companyAnnouncements": [
-    "\nWelcome to {base}!\nRun 'make init' on first launch."
+    "\nWelcome! Run 'make init' on first launch."
   ],
   "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true
