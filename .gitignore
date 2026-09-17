@@ -202,6 +202,7 @@ $RECYCLE.BIN/
 agent-os/
 
 # Playwright
+/test-results/
 .agent-browser/
 .browser/
 .chrome/

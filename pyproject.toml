@@ -5,6 +5,12 @@ description = "로컬 AI-assisted QA 자동화 하네스"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "django>=5.2.17,<5.3",
+  "gunicorn>=23.0,<24.0",
+  "whitenoise>=6.9,<7.0",
+  "pillow>=11.3,<13.0",
+  "psutil>=7.0,<8.0",
+  "defusedxml>=0.7.1,<1.0",
   "fastapi>=0.115,<1.0",
   "pydantic>=2.8,<3.0",
   "python-multipart>=0.0.20,<1.0",
@@ -16,6 +22,7 @@ dependencies = [
 dev = [
   "httpx>=0.27,<1.0",
   "pytest>=8.0,<9.0",
+  "pytest-django>=4.11,<5.0",
 ]
 
 [project.scripts]
@@ -28,6 +35,11 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+DJANGO_SETTINGS_MODULE = "config.test_settings"
 
 [tool.hatch.build.targets.wheel]
-packages = ["devauto"]
+packages = ["devauto", "apps", "config", "integrations"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"templates" = "config/templates"
+"static" = "config/static"
