@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -530,7 +531,13 @@ class ApiTest(unittest.TestCase):
             )
             self.assertEqual(project_response.status_code, 200)
 
-            with patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run):
+            with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
+                patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
+            ):
                 run_response = client.post(
                     "/api/runs",
                     json={

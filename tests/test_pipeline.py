@@ -2412,6 +2412,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "Compose cleanup"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run) as docker_run,
             ):
@@ -2448,6 +2452,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "Update auth flow"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run) as docker_run,
             ):
@@ -2609,6 +2617,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "QA preview change"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run) as docker_run,
             ):
@@ -2657,6 +2669,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "QA preview URL"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run),
             ):
@@ -2698,6 +2714,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "QA preview LAN report"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run),
                 patch(
@@ -2749,6 +2769,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "Unhealthy QA preview"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_health_failure) as docker_run,
             ):
@@ -2790,6 +2814,10 @@ class PipelineTest(unittest.TestCase):
             run = db.create_run({"project_id": "fixture", "title": "QA rejects"}, project)
 
             with (
+                patch(
+                    "devauto.core.doctor.shutil.which",
+                    side_effect=lambda name, which=shutil.which: "/fixture/docker" if name == "docker" else which(name),
+                ),
                 patch("devauto.core.doctor.run_args", side_effect=self._fake_docker_run),
                 patch("devauto.runner.gates.run_args", side_effect=self._fake_docker_run) as docker_run,
             ):
