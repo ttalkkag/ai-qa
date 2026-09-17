@@ -1,77 +1,29 @@
 # AGENTS.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## AI Debug Protocol Boundary
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+When this file is loaded into an AI Debug model-driver context, the harness protocol takes precedence over direct tool instructions in this document. Treat instructions such as read, search, patch, command, ask, plan, and test as intent to express through the role-allowed `ModelAction`; do not invoke a CLI, browser, filesystem, shell, MCP, or other built-in tool directly. The harness validates and dispatches accepted actions through the registered run environment.
 
-## 1. Think Before Coding
+The direct commands in the [browser automation guide](.github/docs/browser-automation-guide.md) apply only to an interactive repository-maintenance agent outside the AI Debug model driver. Inside AI Debug, request an administrator-registered browser command by `command_id` when the role permits it; otherwise return `needs_input` or `final`.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+## Working agreement
 
-Before implementing:
+- Read relevant files before editing. For multi-step work, state a brief plan and verifiable completion criteria.
+- Ask when missing information materially changes the outcome, scope, or external impact. For reversible choices supported by context, state the assumption and proceed; respect authorization already given.
+- Keep analysis and planning requests within that scope. Carry implementation requests through the necessary verification.
+- Preserve existing user changes, reuse project patterns, and make the smallest change that satisfies the request. Avoid unrelated cleanup, dependencies, and abstractions; remove only unused code introduced by your changes.
+- Do not commit, push, or change remote state unless explicitly requested.
 
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+## Verification
 
-## 2. Simplicity First
+- Choose reproducible checks for the changed behavior and its regression risk. Reuse existing tests when sufficient; add tests for uncovered behavior rather than duplicating coverage.
+- Run applicable lint, tests, and required project gates. For documentation-only changes, check Markdown, local links, and the diff; validate changed configuration with its parser or available validator.
+- Once required checks pass, repeat them only after relevant changes, failures, or unresolved concerns.
+- Report the result, checks actually run, and remaining limits. Never describe a skipped or unconfigured check as passing.
 
-**Minimum code that solves the problem. Nothing speculative.**
+## Repository specifics
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
-## 5. Browser Automation
-
-Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
-
-Core workflow:
-
-1. `agent-browser open <url>` - Navigate to page
-2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
-3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
-4. Re-snapshot after page changes
+- This repository contains the AI Debug product documents and the `devauto` Python prototype. `make init` installs the development environment; `make check` runs `.venv/bin/python -m pytest -q`. No standalone lint command is configured; validate changed configuration and scripts directly.
+- `.husky/pre-commit` calls `make check`. Preserve that entry point when connecting real checks for a derived project.
+- `CLAUDE.md` links to this file. `.agents/skills` and `.claude/skills` both link to `.skills`; preserve the shared source and links. For skill changes, see [.skills/README.md](.skills/README.md).
+- For browser automation or changes requiring UI validation, read the [browser automation guide](.github/docs/browser-automation-guide.md).
