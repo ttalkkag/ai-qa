@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}요청 목록{% endblock %}
+{% block main_class %}{% if not work_requests %} empty-main{% endif %}{% endblock %}
+{% block content %}
+{% if work_requests %}
+<ul class="record-list request-list" aria-label="요청 목록">
+{% for item in work_requests %}<li><div><a href="{% url 'work_requests:detail' item.id %}">{{ item.title }}</a><span class="muted">{{ item.project.name }}</span></div><span class="status">{{ item.progress_label }}</span></li>{% endfor %}
+</ul>
+{% else %}
+<div class="empty-state"><p>아직 등록된 요청이 없습니다</p><p class="muted">{% if user.role == 'ADMIN' %}프로젝트에 접수된 요청을 이곳에서 확인할 수 있습니다{% else %}프로젝트에서 대화를 시작해 요청을 정리하세요{% endif %}</p><a class="button secondary" href="{% url 'projects:list' %}">프로젝트 보기</a><a href="{% url 'portal:docs' %}#request">요청 가이드</a></div>
+{% endif %}
+{% endblock %}

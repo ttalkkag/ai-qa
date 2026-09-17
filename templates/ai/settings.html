@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}AI 연결 · AI Debug{% endblock %}
+{% block content %}
+<div class="status-grid">
+<section aria-labelledby="connection-heading">
+  <h2 id="connection-heading">Codex 연결</h2>
+  <p id="connection-status" class="status-line" role="status">확인 전</p>
+  <p class="helptext">서버 계정의 Codex 로그인을 사용합니다 연결 확인은 모델을 호출하지 않습니다</p>
+  <form id="connection-check" method="post" action="{% url 'ai:connection' %}">{% csrf_token %}<button type="submit">CLI·로그인 상태 확인</button></form>
+</section>
+<section aria-labelledby="protection-heading">
+  <h2 id="protection-heading">Docker 실행 환경</h2>
+  <p class="status-line">{% if sandbox %}Docker {{ sandbox.native_passed|yesno:"확인,점검 필요" }}{% else %}점검 기록 없음{% endif %}</p>
+  {% if sandbox %}<p class="helptext">마지막 점검 {{ sandbox.checked_at|date:"Y-m-d H:i" }} · {{ sandbox.cli_version }}</p>{% endif %}
+  <p class="helptext">작업별 컨테이너와 분리된 워크트리를 사용하며 외부 네트워크 접근을 허용합니다</p>
+  <form method="post" action="{% url 'ai:sandbox' %}">{% csrf_token %}<input type="hidden" name="key" value="{{ key }}"><button type="submit">Docker 환경 점검</button></form>
+</section>
+</div>
+{% if sandbox %}
+<details class="technical-details"><summary>실행 보호 점검 결과</summary>
+<div class="table-scroll" tabindex="0" role="region" aria-label="실행 보호 점검표"><table><thead><tr><th>항목</th><th>판정</th><th>근거</th></tr></thead><tbody>{% for check in sandbox.checks %}<tr><td>{{ check.id }}</td><td>{{ check.status }}</td><td>{{ check.detail }}</td></tr>{% endfor %}</tbody></table></div>
+<p class="helptext">마지막 점검 기록입니다 실행 시 현재 환경과 필수 보호를 다시 확인합니다</p>
+</details>
+{% endif %}
+<section class="model-profiles">
+  <div class="section-heading"><h2>목적별 모델</h2><a href="{% url 'portal:docs' %}#ai-setup">설정 가이드</a></div>
+  <table class="model-table"><thead><tr><th scope="col">목적 / 버전</th><th scope="col">모델 / effort</th><th scope="col">사용 / 검증</th><th scope="col">최소 호출 시험</th></tr></thead><tbody>
+  {% for profile in profiles %}
+  <tr>
+    <td data-label="목적 / 버전">{% if profile.key == 'conversation' %}질문·요구사항 정리{% elif profile.key == 'implementation' %}코드 수정{% else %}심층 수정{% endif %}<small class="record-meta">v{{ profile.version }}</small></td>
+    <td data-label="모델 / effort">{{ profile.model_id }} / {{ profile.effort }}</td>
+    <td data-label="사용 / 검증">{{ profile.enabled|yesno:"허용,비활성" }} / {{ profile.get_validation_status_display }}{% if profile.validation_error %}<br>{{ profile.validation_error }}{% endif %}</td>
+    <td data-label="최소 호출 시험">
+      <form class="profile-validation" method="post" action="{% url 'ai:validate-profile' profile.id %}" inert data-confirm="{{ profile.model_id }} / {{ profile.effort }} 검증을 등록할까요? 실제 모델 이용량이 발생할 수 있습니다.">
+        {% csrf_token %}<input type="hidden" name="key" value="{{ key }}-{{ profile.id }}">
+        <input type="hidden" name="consent" value="" data-confirm-value="yes">
+        <button type="submit">검증 등록</button>
+      </form>
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="4">등록된 모델 프로필이 없습니다</td></tr>{% endfor %}
+  </tbody></table>
+  <details class="profile-editor"><summary>모델 프로필 추가</summary>
+  <form class="form-stack" method="post" action="{% url 'ai:save-profile' %}" inert data-confirm="모델 프로필을 저장할까요? 새 조합은 검증 후 사용할 수 있습니다." data-confirm-fields="model_id effort">{% csrf_token %}{% include "includes/form_fields.html" with form=form %}<button type="submit">프로필 저장</button></form>
+  </details>
+</section>
+<section><h2>최근 호출 기록</h2><div class="table-scroll" tabindex="0" role="region" aria-label="최근 호출 기록표"><table><thead><tr><th>시간 / 목적</th><th>상태</th><th>요청 모델 / effort</th><th>오류</th></tr></thead><tbody>{% for invocation in invocations %}<tr><td>{{ invocation.created_at }} / {{ invocation.purpose }}</td><td>{{ invocation.get_state_display }}</td><td>{{ invocation.requested_model }} / {{ invocation.requested_effort }}</td><td>{{ invocation.error_code }}</td></tr>{% empty %}<tr><td colspan="4" class="empty-note">호출 기록이 없습니다</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/ai-settings.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}결과 승인{% endblock %}
+{% block main_class %}{% if not publications and not pending_reviews %} empty-main{% endif %}{% endblock %}
+{% block content %}
+{% for review in pending_reviews %}<article class="record-row"><h2><a href="{% url 'artifacts:detail' review.bundle_id %}">{{ review.bundle.run.project.name }} · {{ review.bundle.request_revision.request.title }}</a></h2><p>관리자 승인 대기 · {{ review.accepted_by.display_name }} · {{ review.updated_at|date:'Y-m-d H:i' }}</p><p class="muted">사용자가 확인한 로컬 결과입니다 승인만으로 push·PR을 실행하지 않습니다</p></article>{% endfor %}
+{% for publication in publications %}
+<article class="record-row"><h2><a href="{% url 'approvals:detail' publication.id %}">{{ publication.project.name }} · {{ publication.get_state_display }}</a></h2>
+<p>{{ publication.snapshot.policy.repository_full_name }} · {{ publication.created_at }}</p></article>
+{% empty %}{% if not pending_reviews %}<div class="empty-state"><p>승인을 기다리는 결과가 없습니다</p><p class="muted">사용자가 작업 결과를 확인하면 이곳에 표시됩니다</p><a class="button secondary" href="{% url 'work_requests:list' %}">요청 보기</a><a href="{% url 'portal:docs' %}#result">결과·발행 가이드</a></div>{% endif %}{% endfor %}
+{% endblock %}

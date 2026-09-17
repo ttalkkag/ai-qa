@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ conversation.title }}{% endblock %}
+{% block content %}
+<div class="reading-page conversation-thread">
+{% if can_edit %}<details><summary>제목 변경</summary><form class="form-stack" method="post" action="{% url 'conversations:rename' conversation.id %}">{% csrf_token %}{% include "includes/form_fields.html" with form=rename_form %}<button>제목 저장</button></form></details>{% endif %}
+<div id="conversation-messages" data-updates-url="{% url 'conversations:updates' conversation.id %}" aria-live="polite">
+{% for message in chat_messages %}<article data-sequence="{{ message.sequence }}"><h2>{{ message.get_kind_display }}</h2><p class="message">{{ message.body }}</p>{% for attachment_id in message.attachment_ids %}<p><a href="{% url 'artifacts:download' attachment_id %}">첨부 내려받기</a></p>{% endfor %}</article>{% endfor %}
+</div>
+<p id="conversation-status" class="helptext" role="status"></p>
+<p id="conversation-run-status" role="status"></p>
+<div id="response-list" aria-live="polite">{% for call in calls %}<div data-response-id="{{ call.id }}"><p data-response-label>답변 상태: {{ call.response_label }}</p><p data-response-message>{{ call.response_message }}</p>{% if call.retryable and can_edit %}<form method="post" action="{% url 'conversations:retry_response' conversation.id call.id %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ call.retry_key }}"><button>답변 다시 요청</button></form>{% endif %}</div>{% endfor %}</div>
+{% if can_edit %}
+<details><summary>화면 자료 또는 로그 첨부</summary><p>PNG/JPEG 또는 UTF-8 txt/log/md, 파일당 5 MiB, 메시지당 3개까지입니다. 비밀번호·토큰·개인정보가 없는지 먼저 확인하세요.</p><form class="form-stack" id="attachment-upload" method="post" enctype="multipart/form-data" action="{% url 'artifacts:upload' conversation.id %}">{% csrf_token %}<div class="form-field"><label class="field-label" for="attachment-file">첨부 파일</label><input id="attachment-file" type="file" name="file" accept=".png,.jpg,.jpeg,.txt,.log,.md" required></div><button>첨부 준비</button></form><p id="attachment-status" role="status"></p></details>
+<form class="form-stack" method="post" action="{% url 'conversations:message' conversation.id %}">{% csrf_token %}{% include "includes/form_fields.html" %}<button>설명 보내기</button></form>
+<p class="helptext">실행 중인 작업에는 추가 설명이 자동 반영되지 않습니다</p>
+<form method="post" action="{% url 'conversations:create_request' conversation.id %}">{% csrf_token %}<button>요청으로 정리</button></form>
+{% else %}<p>읽기 전용 대화입니다.</p>{% endif %}
+{% if conversation.work_request %}<p><a href="{% url 'work_requests:detail' conversation.work_request.id %}">연결된 요청 · {{ conversation.work_request.get_state_display }}</a></p>{% endif %}
+<script src="{% static 'js/conversation.js' %}" defer></script>
+</div>
+{% endblock %}

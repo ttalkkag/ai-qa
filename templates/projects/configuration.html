@@ -1,0 +1,22 @@
+{% extends "projects/form.html" %}
+{% block content %}
+{{ block.super }}
+<details><summary>검증 명령 입력 예시</summary>
+<p>호스트 도구 또는 사본 안의 실행 파일만 사용하세요. 셸 명령 문자열·인증정보·원본 절대 경로는 허용하지 않습니다.</p>
+<pre>[
+  {
+    "command_id": "unit",
+    "display_name": "단위 테스트",
+    "kind": "TEST",
+    "parser_id": "pytest-summary",
+    "parser_version": 1,
+    "argv": [".venv/bin/python", "-m", "pytest", "-q"],
+    "cwd": ".",
+    "timeout_sec": 300,
+    "required": true,
+    "generated_paths": [".aiqa-output"]
+  }
+]</pre>
+<p>준비 명령은 같은 argv·cwd·timeout 규칙을 따르며 선택한 자료 ID를 dependency_bundle_id로 지정합니다. 등록된 준비도 오프라인 샌드박스에서만 실행합니다.</p>
+</details>
+{% endblock %}

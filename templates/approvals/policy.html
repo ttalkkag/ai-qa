@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}발행 설정{% endblock %}
+{% block content %}
+<div class="settings-page">
+
+<form class="form-stack" method="post" inert data-confirm="발행 설정을 저장할까요? 원격 저장소와 발행 범위를 확인하세요." data-confirm-fields="repository_full_name remote_url base_branch mode enabled">{% csrf_token %}{% include "includes/form_fields.html" %}<button type="submit">발행 설정 저장</button></form>
+<p class="helptext">설정 변경 시 미완료 승인은 무효화됩니다 토큰·비밀번호는 입력하지 마세요</p>
+</div>
+{% endblock %}

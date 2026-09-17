@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}로그인{% endblock %}
+{% block main_class %} login-main{% endblock %}
+{% block content %}
+<form class="form-stack login-form" method="post" aria-label="로그인">
+  {% csrf_token %}
+  {% include "includes/form_fields.html" %}
+  <button type="submit">로그인</button>
+</form>
+{% endblock %}

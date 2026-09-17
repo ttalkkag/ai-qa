@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · 대화{% endblock %}
+{% block content %}
+<div class="workspace-grid">
+  <div class="workspace-primary">
+    {% if project.state == 'ACTIVE' %}
+    <form class="form-stack conversation-composer" method="post" aria-label="새 대화">
+      {% csrf_token %}{% include "includes/form_fields.html" %}
+      <p class="helptext">메시지는 Codex 모델에 전달됩니다 비밀번호·토큰·개인정보는 제외해 주세요</p>
+      <div class="form-actions"><a href="{% url 'portal:docs' %}#conversation">대화 가이드</a><button class="primary" type="submit">대화 시작</button></div>
+    </form>
+    {% else %}<p class="empty-note">보관된 프로젝트입니다 이전 대화만 확인할 수 있습니다</p>{% endif %}
+  </div>
+  <aside class="workspace-aside" aria-label="대화 목록">
+    <h2>대화 목록</h2>
+    <ul class="record-list">{% for conversation in conversations %}<li><a href="{% url 'conversations:detail' conversation.id %}">{{ conversation.title }}</a><time class="muted">{{ conversation.updated_at|date:"Y-m-d H:i" }}</time></li>{% empty %}<li class="empty-note">아직 대화가 없습니다</li>{% endfor %}</ul>
+  </aside>
+</div>
+{% endblock %}

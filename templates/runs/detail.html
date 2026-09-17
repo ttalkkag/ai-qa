@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}실행 상태 · AI Debug{% endblock %}
+{% block content %}
+<div class="reading-page">
+<section id="run-status" data-status-url="{% url 'runs:status' run.id %}" data-terminal="{{ run.terminal|yesno:'true,false' }}">
+  <p class="eyebrow">대기 → 준비 → 수정 → 검증 → 결과</p>
+  <p>실행 상태: <span id="status-label">{{ run.label }}</span></p>
+  <p>현재 단계 <span id="status-stage">{{ run.stage }}</span> · <span id="elapsed">{{ run.elapsed_seconds }}</span>초</p>
+  <p id="status-message" role="status">{{ run.message }}</p>
+  <p id="status-error" class="muted">{{ run.error_code }}</p>
+  <p>완료는 검증된 로컬 결과 생성이며 push·PR·배포 완료가 아닙니다.</p>
+  <ol id="run-events">{% for event in run.events %}<li data-sequence="{{ event.sequence }}">{{ event.message }}</li>{% endfor %}</ol>
+  <a id="result-link" {% if run.result_bundle_id %}href="/results/{{ run.result_bundle_id }}/"{% else %}hidden{% endif %}>결과 확인</a>
+  {% if not run.terminal %}<form id="cancel-form" method="post" action="{% url 'runs:cancel' run.id %}" inert data-confirm="선택한 실행 작업을 진행할까요?">{% csrf_token %}<input type="hidden" name="key" value="{{ cancel_key }}">{% if not run.is_owner %}<input type="hidden" name="operational" value="1">{% endif %}<button type="submit" data-confirm="진행 중인 실행의 취소를 요청할까요? 실제 종료까지 시간이 걸릴 수 있습니다.">{% if run.is_owner %}취소 요청{% else %}관리자 운영 취소{% endif %}</button></form>{% endif %}
+  {% if run.is_owner %}<form id="retry-form" {% if not run.terminal or run.status == 'SUCCEEDED' %}hidden{% endif %} method="post" action="{% url 'runs:retry' run.id %}" inert data-confirm="선택한 실행 작업을 진행할까요?">{% csrf_token %}<input type="hidden" name="key" value="{{ retry_key }}"><p>재시도는 같은 명세로 새 수정 작업을 실행합니다. 결과가 이전과 달라질 수 있습니다.</p><button type="submit" data-confirm="같은 명세로 새 수정 작업을 시작할까요? 모델 이용량이 발생하며 이전 결과와 달라질 수 있습니다.">새 실행으로 재시도</button></form>{% endif %}
+</section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/run-status.js' %}" defer></script>{% endblock %}

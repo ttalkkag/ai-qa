@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<form class="form-stack" method="post" inert data-confirm="{% if is_registration %}프로젝트를 등록할까요?{% else %}프로젝트 설정을 저장할까요? 기존 작업의 설정 이력은 유지됩니다.{% endif %}"{% if is_registration %} data-confirm-title="프로젝트 생성"{% endif %} data-confirm-fields="name local_path source_ref">
+  {% csrf_token %}
+  {% include "includes/form_fields.html" %}
+  {% if is_registration %}
+  <div class="form-actions">
+    <a href="{% url 'portal:docs' %}#project-setup">프로젝트 등록 가이드</a>
+    <button class="primary" type="submit">{{ submit_label }}</button>
+  </div>
+  {% else %}
+  <button type="submit">{{ submit_label }}</button>
+  {% endif %}
+</form>
+{% endblock %}

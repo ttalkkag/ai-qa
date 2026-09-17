@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Admin · AI Debug{% endblock %}
+{% block content %}
+<nav class="admin-directory" aria-label="관리 기능">
+  <div class="directory-row"><div><a href="{% url 'approvals:list' %}">요청 승인</a><p>사용자가 확인한 로컬 결과 승인 · 원격 발행은 별도</p></div><span aria-hidden="true">→</span></div>
+  <div class="directory-row"><div><a href="{% url 'accounts:manage' %}">계정 관리</a><p>계정 생성, 권한 설정과 프로젝트 할당</p></div><span aria-hidden="true">→</span></div>
+  <div class="directory-row"><div><a href="{% url 'operations:dashboard' %}">운영 상태</a><p>로컬 실행 환경 점검과 백업·복원</p></div><span aria-hidden="true">→</span></div>
+</nav>
+{% endblock %}

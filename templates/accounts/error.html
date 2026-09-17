@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}요청을 처리할 수 없습니다{% endblock %}
+{% block content %}<p role="alert">요청을 처리할 수 없습니다</p><p>{{ error.message }}</p><p>{{ error.code }}</p><a href="/">프로젝트로 돌아가기</a>{% endblock %}

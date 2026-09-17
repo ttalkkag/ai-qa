@@ -1,0 +1,10 @@
+<nav class="site-navigation" aria-label="현재 위치">
+  <div class="container navigation-content">
+    <ol class="breadcrumbs">
+      {% for item in items %}
+      <li>{% if not forloop.first %}<span class="breadcrumb-separator" aria-hidden="true">/</span>{% endif %}{% if item.url %}<a href="{{ item.url }}"{% if forloop.last %} aria-current="page"{% endif %}>{{ item.label }}</a>{% else %}<span{% if forloop.last %} aria-current="page"{% endif %}>{{ item.label }}</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+    {% if add_project %}<a class="button secondary navigation-add" href="{% url 'projects:create' %}" title="프로젝트 추가">Add</a>{% endif %}
+  </div>
+</nav>

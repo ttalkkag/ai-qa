@@ -1,0 +1,23 @@
+<header class="site-header">
+  <div class="container header-content">
+  <a class="brand" href="/projects/">AI Debug <span>LOCAL</span></a>
+  {% if user.is_authenticated %}
+  {% with namespace=request.resolver_match.namespace view_name=request.resolver_match.view_name %}
+  <nav aria-label="주 메뉴">
+    <a href="/projects/"{% if namespace == 'projects' or namespace == 'conversations' or view_name == 'approvals:policy' %} aria-current="page"{% endif %}>Project</a>
+    <a href="/requests/"{% if namespace == 'work_requests' or namespace == 'runs' or namespace == 'artifacts' or namespace == 'approvals' and view_name != 'approvals:policy' and user.role != 'ADMIN' %} aria-current="page"{% endif %}>Request</a>
+    {% if user.role == 'ADMIN' %}
+    <a href="/ai/"{% if namespace == 'ai' %} aria-current="page"{% endif %}>AI</a>
+    <a href="{% url 'portal:admin' %}"{% if view_name == 'portal:admin' or view_name == 'accounts:manage' or namespace == 'operations' or namespace == 'approvals' and view_name != 'approvals:policy' %} aria-current="page"{% endif %}>Admin</a>
+    {% endif %}
+    <a class="header-icon" href="{% url 'portal:docs' %}" aria-label="Docs" title="Docs"{% if view_name == 'portal:docs' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 12h8M8 16h8"/></svg>
+    </a>
+    <a class="header-icon" href="/accounts/me/" aria-label="Account" title="Account"{% if view_name == 'accounts:me' or view_name == 'accounts:password' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9.5 3-.6 2.3-2 .9-2.2-.7-2.5 4.3L4 11.4v2.2l-1.8 1.6 2.5 4.3 2.2-.7 2 .9.6 2.3h5l.6-2.3 2-.9 2.2.7 2.5-4.3-1.8-1.6v-2.2l1.8-1.6-2.5-4.3-2.2.7-2-.9L14.5 3Z"/><circle cx="12" cy="12.5" r="3"/></svg>
+    </a>
+  </nav>
+  {% endwith %}
+  {% endif %}
+  </div>
+</header>

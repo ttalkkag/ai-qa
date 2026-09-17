@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}계정 관리{% endblock %}
+{% block content %}
+<div class="settings-page">
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<details class="account-create"{% if create_form.is_bound %} open{% endif %}><summary>계정 생성</summary><form class="form-stack" method="post" inert data-confirm="계정 정보를 변경할까요? 대상 계정과 권한·할당 설정을 다시 확인하세요." data-confirm-fields="username display_name role is_active project_id granted reason">{% csrf_token %}<input type="hidden" name="action" value="create">{% include "includes/form_fields.html" with form=create_form %}<button type="submit">계정 생성</button></form></details>
+{% for row in rows %}
+<section>
+<h2>{{ row.account.display_name }} ({{ row.account.username }})</h2>
+<details><summary>역할·활성 상태 수정</summary><form class="form-stack" method="post" inert data-confirm="{{ row.account.username }} 계정 정보를 변경할까요? 대상 계정과 권한·할당 설정을 다시 확인하세요." data-confirm-fields="username display_name role is_active project_id granted reason">{% csrf_token %}<input type="hidden" name="action" value="change">{% include "includes/form_fields.html" with form=row.change_form %}<button type="submit">변경 저장</button></form></details>
+<details><summary>프로젝트 할당</summary><ul>{% for membership in row.memberships %}<li>{{ membership.project.name }}</li>{% empty %}<li>명시적 할당 없음 (관리자는 전체 프로젝트 접근)</li>{% endfor %}</ul><form class="form-stack" method="post" inert data-confirm="{{ row.account.username }} 계정 정보를 변경할까요? 대상 계정과 권한·할당 설정을 다시 확인하세요." data-confirm-fields="username display_name role is_active project_id granted reason">{% csrf_token %}<input type="hidden" name="action" value="membership">{% include "includes/form_fields.html" with form=row.membership_form %}<button type="submit">할당 변경</button></form></details>
+<details><summary>비밀번호 재설정</summary><p>기존 로그인은 무효화되며, 사용자에게 초기 비밀번호를 직접 전달해야 합니다.</p><form class="form-stack" method="post" inert data-confirm="{{ row.account.username }} 계정 정보를 변경할까요? 대상 계정과 권한·할당 설정을 다시 확인하세요." data-confirm-fields="username display_name role is_active project_id granted reason">{% csrf_token %}<input type="hidden" name="action" value="reset">{% include "includes/form_fields.html" with form=row.reset_form %}<button type="submit">초기 비밀번호 재설정</button></form></details>
+</section>
+{% endfor %}
+
+</div>
+{% endblock %}

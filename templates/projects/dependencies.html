@@ -1,0 +1,7 @@
+{% extends "projects/form.html" %}
+{% block content %}
+
+{{ block.super }}
+<h2>등록된 자료</h2>
+<ul>{% for bundle in bundles %}<li><code>{{ bundle.id }}</code> · {{ bundle.platform }} · {{ bundle.runtime }} · {{ bundle.manifest_sha256|slice:":12" }}<br>준비 명령에서 참조할 사본 경로: <code>.aiqa-inputs/{{ bundle.id }}/</code></li>{% empty %}<li>아직 등록된 의존성 자료가 없습니다.</li>{% endfor %}</ul>
+{% endblock %}

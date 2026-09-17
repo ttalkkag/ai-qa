@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}변경 결과{% endblock %}
+{% block content %}
+<div class="result-workspace">
+<p>실행 상태: {{ bundle.run.get_status_display }} · 결과 v{{ bundle.version }}</p>
+{% if bundle.corruption_reason %}
+<p role="alert">결과 손상, 사용 불가</p>
+{% elif bundle.visibility == "RESTRICTED" %}
+<p role="alert">비밀정보 의심 내용이 포함되어 결과 다운로드와 발행을 차단했습니다. 안전한 입력으로 새 작업을 요청하세요.</p>
+{% elif bundle.expired_at %}
+<p>보관기간이 만료된 결과입니다.</p>
+{% elif bundle.unavailable_reason %}
+<p role="alert">결과를 사용할 수 없습니다: {{ bundle.unavailable_reason }}</p>
+{% else %}
+<section class="result-review" aria-label="결과 확인">
+<p><strong>{% if review %}{{ review.get_state_display }}{% elif current_result %}사용자 결과 확인 대기{% else %}이전 결과{% endif %}</strong></p>
+{% if review.feedback %}<p>{{ review.feedback|linebreaksbr }}</p>{% endif %}
+{% if bundle.run.status == "SUCCEEDED" and bundle.completeness == "COMPLETE" %}
+{% if owner_review %}
+{% if not review %}<form method="post" action="{% url 'artifacts:review' bundle.id %}" inert data-confirm="수정 결과와 검증 내용을 확인했나요? 관리자에게 완료 확인을 전달합니다. 원격 발행은 하지 않습니다.">{% csrf_token %}<input type="hidden" name="manifest_sha256" value="{{ bundle.manifest_sha256 }}"><button name="action" value="accept">작업 완료 · 관리자에게 전달</button></form>{% endif %}
+<details><summary>재수정 요청</summary><form method="post" action="{% url 'artifacts:review' bundle.id %}" inert data-confirm="보완 내용을 새 명세로 작성할까요? 기존 결과는 보존됩니다.">{% csrf_token %}<input type="hidden" name="manifest_sha256" value="{{ bundle.manifest_sha256 }}"><label for="review-reason">보완할 내용</label><textarea id="review-reason" name="reason" required maxlength="2000"></textarea><p class="helptext">기존 요구사항에 보완 내용을 추가합니다. 명세를 다시 확인하면 기준 코드에서 새 작업을 시작합니다</p><button name="action" value="rework">재수정 요청</button></form></details>
+{% endif %}
+{% if user.role == "ADMIN" and review.state == "AWAITING_ADMIN" and current_result %}
+<form method="post" action="{% url 'artifacts:review' bundle.id %}" inert data-confirm="이 로컬 결과를 승인할까요? push·PR 생성은 실행하지 않습니다.">{% csrf_token %}<input type="hidden" name="manifest_sha256" value="{{ bundle.manifest_sha256 }}"><button name="action" value="approve">로컬 결과 승인</button></form>
+<details><summary>보완 요청</summary><form method="post" action="{% url 'artifacts:review' bundle.id %}" inert data-confirm="사용자에게 결과 보완을 요청할까요?">{% csrf_token %}<input type="hidden" name="manifest_sha256" value="{{ bundle.manifest_sha256 }}"><label for="reject-reason">보완 사유</label><textarea id="reject-reason" name="reason" required maxlength="2000"></textarea><button name="action" value="reject">보완 요청</button></form></details>
+{% endif %}
+{% endif %}
+<a href="{% url 'work_requests:detail' work_request.id %}">요청 명세·진행 내역</a>
+</section>
+<h2>요청과 변경 요약</h2>
+<div class="result-summary">{% for section in summary_sections %}{% if section.heading %}<h3>{{ section.heading }}</h3>{% else %}<p>{{ section.text|linebreaksbr }}</p>{% endif %}{% endfor %}</div>
+<p>증거 완전성: {{ bundle.completeness }}. 로컬 결과와 원격 발행은 별도입니다.</p>
+<h2>파일별 변경</h2>
+<ul>{% for change in changes %}<li>{{ change.change }} {{ change.path }}{% if change.binary %} (바이너리){% endif %}</li>{% empty %}<li>변경 파일 없음</li>{% endfor %}</ul>
+{% if diff_truncated %}<p>화면 한도로 변경 일부를 생략했습니다. 전체 검토가 필요하면 정규 패치를 다운로드하세요.</p>{% endif %}
+<details><summary>코드 변경 보기</summary><pre>{{ display_patch }}</pre></details>
+<h2>검증과 패치</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="검증 결과표"><table><thead><tr><th>단계</th><th>검사</th><th>결과</th><th>실행 개수</th></tr></thead><tbody>{% for check in checks %}<tr><td>{{ check.phase }}</td><td>{{ check.check_id }}</td><td>{{ check.display_outcome }}</td><td>{{ check.display_count|default_if_none:"미확인" }}</td></tr>{% empty %}<tr><td colspan="4">수행된 검증 증거 없음</td></tr>{% endfor %}</tbody></table></div>
+<ul>{% for artifact in artifacts %}<li>{% if artifact.expired_at %}{{ artifact.display_name }} — 만료됨{% else %}<a href="{% url 'artifacts:download' artifact.id %}">{{ artifact.display_name }}</a>{% endif %}</li>{% endfor %}</ul>
+{% if user.role == "ADMIN" and review.state == "APPROVED" and current_result and bundle.run.status == "SUCCEEDED" and bundle.completeness == "COMPLETE" %}
+<form method="post" action="{% url 'approvals:prepare' bundle.run_id %}" inert data-confirm="발행 검토를 준비할까요? 원격 기준을 조회하지만 아직 push·PR은 하지 않습니다.">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ publication_key }}"><button type="submit">관리자 발행 검토 준비</button></form>
+{% endif %}
+{% for publication in bundle.run.publications.all %}<p><a href="{% url 'approvals:detail' publication.id %}">발행 상태: {{ publication.state }}</a></p>{% endfor %}
+{% endif %}
+<details><summary>상세 정보</summary><p>기준 {{ bundle.baseline_commit_sha }} · 설정 v{{ bundle.project_config_version }} · 보관기한 {{ bundle.expires_at }}</p><p>결과 hash: {{ bundle.manifest_sha256 }}</p></details>
+{% if user.role == "ADMIN" and bundle.run.result_commit_sha %}
+<details class="local-git-result"><summary>로컬 Git 결과</summary>
+<dl><dt>Branch</dt><dd><code>{{ bundle.run.result_branch }}</code></dd><dt>Commit</dt><dd><code>{{ bundle.run.result_commit_sha }}</code></dd></dl>
+<p class="muted">앱의 독립 작업 저장소에 저장된 결과입니다. 원본 저장소의 브랜치·미커밋 변경은 유지되며 원격 발행은 하지 않았습니다</p>
+</details>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}발행 준비 접수{% endblock %}
+{% block head %}{% if job.state == "QUEUED" or job.state == "RUNNING" %}<meta http-equiv="refresh" content="2;url={% url 'approvals:preparation-status' job.id %}">{% endif %}{% endblock %}
+{% block content %}
+<div class="reading-page">
+<p role="status">발행 준비를 접수했습니다</p>
+<p>작업 ID: {{ job.id }}</p>
+<p>준비 상태: {{ job.get_state_display }}{% if job.error_code %} · 확인 필요: {{ job.error_code }}{% endif %}</p>
+<p>작업 프로세스가 원격 기준을 읽고 승인할 커밋을 준비합니다. 이 단계는 push나 PR을 만들지 않습니다.</p>
+{% if job.state == "FAILED" or job.state == "CANCELLED" %}
+<p>준비가 완료되지 않았습니다. 표시된 오류를 해결한 뒤 관리자가 다시 준비할 수 있습니다.</p>
+<form method="post" action="{% url 'approvals:prepare' job.subject_id %}" inert data-confirm="발행 검토를 다시 준비할까요? 이 단계는 push·PR을 만들지 않습니다.">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ retry_key }}"><button>발행 준비 다시 요청</button></form>
+{% endif %}
+<a href="{% url 'approvals:preparation-status' job.id %}">준비 상태 다시 확인</a>
+<a href="/runs/{{ job.subject_id }}/">실행 결과에서 준비 상태 확인</a>
+</div>
+{% endblock %}

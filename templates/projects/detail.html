@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block content %}
+<div class="project-overview">
+  <div class="project-statusbar">
+    <span class="project-status project-status--{{ detail_status.tone }}">{{ detail_status.label }}</span>
+    <form method="post" action="{% url 'projects:inspect' project.id %}">{% csrf_token %}<button type="submit" class="quiet">상태 새로고침</button></form>
+  </div>
+  {% if project.description %}<p class="project-description">{{ project.description|urlize|linebreaksbr }}</p>{% endif %}
+  <dl class="project-facts">
+    <div><dt>Branch</dt><dd>{{ revision.source_ref }}</dd></div>
+    <div><dt>기준 코드</dt><dd><code>{{ health.base_commit_sha|slice:":12"|default:"확인 필요" }}</code></dd></div>
+    <div><dt>마지막 확인</dt><dd>{% if health %}<time datetime="{{ health.checked_at|date:'c' }}">{{ health.checked_at|date:"Y-m-d H:i" }}</time>{% else %}확인 전{% endif %}</dd></div>
+    <div><dt>미커밋 변경</dt><dd>{% if health.source_ready %}{{ health.dirty_count }}건{% if health.is_dirty %}<span class="muted"> · 작업에서 제외</span>{% endif %}{% else %}확인 필요{% endif %}</dd></div>
+  </dl>
+</div>
+<div class="project-columns{% if not can_manage %} project-columns--manager{% endif %}">
+  <div class="project-primary">
+    {% if reasons %}
+    <section class="project-next-step" aria-labelledby="project-next-title">
+      <h2 id="project-next-title">{% if project.state == "ARCHIVED" %}보관된 프로젝트{% else %}다음 단계{% endif %}</h2>
+      <ul>{% for reason in reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+      {% if can_manage and project.state == "ACTIVE" %}<a class="button" href="{% url 'projects:configure' project.id %}">작업 정책·검증 명령</a>{% endif %}
+    </section>
+    {% endif %}
+    <section class="project-work" aria-labelledby="project-work-title">
+      <div class="project-section-heading"><h2 id="project-work-title">작업 준비</h2><span class="muted">설정 {{ project.project_config_version }}</span></div>
+      <dl class="project-settings-list">
+        <div><dt>기준 코드 확인</dt><dd>{% if health.source_ready %}완료{% else %}확인 필요{% endif %}</dd></div>
+        <div><dt>읽기 범위</dt><dd>{% for path in revision.read_paths %}{% if path == "." %}프로젝트 전체{% else %}<code>{{ path }}</code>{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}없음{% endfor %}</dd></div>
+        <div><dt>수정 범위</dt><dd>{% for path in revision.write_paths %}{% if path == "." %}프로젝트 전체{% else %}<code>{{ path }}</code>{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}수정 불가{% endfor %}</dd></div>
+        <div><dt>AI 실행 준비</dt><dd>{% if can_manage %}<a href="{% url 'ai:settings' %}">AI에서 별도 확인</a>{% else %}관리자 확인 필요{% endif %}</dd></div>
+      </dl>
+    </section>
+    <section aria-labelledby="project-checks-title">
+      <div class="project-section-heading"><h2 id="project-checks-title">검증</h2><span class="muted">전체 {{ checks|length }} · 필수 {{ required_check_count }}</span></div>
+      {% if checks %}
+      <ul class="project-checks">{% for check in checks %}<li><span>{{ check.display_name }}</span><span class="muted">{% if check.required %}필수{% else %}선택{% endif %} · {% if check.kind == "TEST" %}테스트{% else %}명령 검사{% endif %}</span></li>{% endfor %}</ul>
+      <p class="muted project-caption">검사 결과는 각 요청의 실행 결과에서 확인</p>
+      {% else %}<p class="muted">등록된 검증 없음</p>{% endif %}
+    </section>
+    <div class="project-conversation">
+      <a class="button{% if can_manage and reasons %} secondary{% endif %}" href="{% url 'conversations:list' project.id %}">{% if project.state == "ACTIVE" %}문제 상담·내 요청{% else %}과거 대화·요청 보기{% endif %}</a>
+    </div>
+  </div>
+  {% if can_manage %}
+  <aside class="project-management" aria-label="프로젝트 관리">
+    <h2>프로젝트 관리</h2>
+    <dl class="project-repository"><dt>Path</dt><dd><code>{{ project.canonical_repo_path }}</code></dd></dl>
+    <nav aria-label="프로젝트 설정">
+      <a href="{% url 'projects:edit' project.id %}">이름·설명</a>
+      {% if not reasons or project.state == "ARCHIVED" %}<a href="{% url 'projects:configure' project.id %}">작업 정책·검증 명령</a>{% endif %}
+      <a href="{% url 'accounts:manage' %}">계정·프로젝트 할당</a>
+      <a href="{% url 'projects:dependencies' project.id %}">오프라인 준비 자료</a>
+      <a href="{% url 'approvals:policy' project.id %}">선택적 발행 설정</a>
+    </nav>
+    <details class="project-state-settings">
+      <summary>상태 변경 <span class="muted">· {{ project.get_state_display }}</span></summary>
+      <form method="post" action="{% url 'projects:state' project.id %}" inert data-confirm="프로젝트 상태를 변경할까요? 아카이브하면 새 작업이 제한됩니다." data-confirm-fields="state reason">{% csrf_token %}{% include "includes/form_fields.html" with form=state_form %}<button type="submit">상태 변경</button></form>
+    </details>
+  </aside>
+  {% endif %}
+</div>
+{% endblock %}

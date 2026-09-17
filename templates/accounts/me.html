@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}내 계정{% endblock %}
+{% block content %}
+<div class="settings-page">
+<form class="form-stack" method="post">
+  {% csrf_token %}
+  <div class="form-field">
+    <label for="account-username">아이디:</label>
+    <input id="account-username" type="text" value="{{ account_username }}" readonly>
+  </div>
+  {% include "includes/form_fields.html" %}
+  <div class="form-actions"><a href="{% url 'accounts:password' %}">비밀번호 변경</a><button class="primary" type="submit">내 정보 저장</button></div>
+</form>
+<form class="account-logout" method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="quiet" type="submit">로그아웃</button></form>
+</div>
+{% endblock %}

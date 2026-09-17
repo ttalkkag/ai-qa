@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}프로젝트{% endblock %}
+{% block main_class %}{% if not projects %} project-empty-main{% endif %}{% endblock %}
+{% block content %}
+{% if not projects %}
+<div class="project-empty">
+{% if can_manage %}
+  <p>프로젝트를 연결하고 시작하세요.</p>
+  <a class="button" href="{% url 'projects:create' %}">프로젝트 추가</a>
+  <a href="{% url 'portal:docs' %}#project-setup">프로젝트 등록 가이드</a>
+{% else %}
+  <p>할당된 프로젝트가 없습니다. 관리자에게 문의하세요.</p>
+  <a href="{% url 'portal:docs' %}">사용 가이드</a>
+{% endif %}
+</div>
+{% else %}
+
+<div class="project-directory">
+<table class="project-table" aria-label="프로젝트 목록">
+  <thead><tr><th scope="col">프로젝트 <span class="project-count">{{ projects|length }}</span></th><th scope="col">프로젝트 상태</th><th scope="col">마지막 확인</th></tr></thead>
+  <tbody>
+{% for project in projects %}
+  <tr>
+    <td class="project-identity">
+      <a class="project-link" href="{% url 'projects:detail' project.id %}"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/></svg><span>{{ project.name }}</span><span class="project-open" aria-hidden="true">→</span></a>
+      {% if project.description %}<p class="project-description">{{ project.description }}</p>{% endif %}
+    </td>
+    <td data-label="프로젝트 상태">
+      {% if project.state == "ARCHIVED" %}<span class="project-chip" data-tone="neutral">아카이브</span>
+      {% elif not project.health %}<span class="project-chip" data-tone="warning">상태 확인 필요</span>
+      {% elif project.health.readiness == "UNAVAILABLE" %}<span class="project-chip" data-tone="danger">저장소 접근 불가</span>
+      {% elif project.health.modification_ready %}<span class="project-chip" data-tone="ready">프로젝트 준비 완료</span>
+      {% else %}<span class="project-chip" data-tone="warning">프로젝트 설정 필요</span>{% endif %}
+      {% if project.health.is_dirty %}<p class="project-note">미커밋 {{ project.health.dirty_count }}건 · 작업 제외</p>{% endif %}
+    </td>
+    <td class="project-checked" data-label="마지막 확인">{% if project.health %}<time datetime="{{ project.health.checked_at|date:'c' }}">{{ project.health.checked_at|date:"Y-m-d H:i" }}</time>{% else %}<span class="muted">확인 전</span>{% endif %}</td>
+  </tr>
+{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

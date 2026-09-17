@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}발행 요청 확인{% endblock %}
+{% block content %}
+<p role="alert">요청을 처리하지 못했습니다</p>
+<p>{{ error.message }}</p><p>오류 코드: {{ error.code }}</p>
+<a href="/">프로젝트로 돌아가기</a>
+{% endblock %}

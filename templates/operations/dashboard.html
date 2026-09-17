@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}로컬 운영 — AI Debug{% endblock %}
+{% block content %}
+<div class="operations-workspace">
+
+<div class="table-scroll" tabindex="0" role="region" aria-label="운영 점검표"><table><thead><tr><th>점검</th><th>상태</th><th>설명</th></tr></thead><tbody>
+{% for check in checks %}<tr><td>{{ check.id }}</td><td>{{ check.status }}</td><td>{{ check.detail }}</td></tr>{% endfor %}
+</tbody></table></div>
+<details class="technical-details"><summary>호스트 터미널 명령</summary><p class="helptext">백업·복원 전 웹과 worker를 중지하세요</p>
+<p><code>python manage.py local_doctor</code>는 조회만 수행합니다. 모델 시험은 <a href="/ai/">AI 연결</a>에서 관리자 동의 후 별도로 진행합니다.</p>
+<p><code>python manage.py backup_local</code>은 provider 인증·SSH·Keychain을 제외하고 로컬 데이터를 백업합니다.</p>
+<p><code>python manage.py restore_local &lt;backup_path&gt; --destination &lt;new_empty_data_dir&gt;</code>는 원본을 덮어쓰지 않습니다. 복원 뒤 이전 세션·승인·대기 작업은 다시 사용할 수 없습니다.</p>
+</details>
+</div>
+{% endblock %}

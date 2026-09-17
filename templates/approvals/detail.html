@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}발행 검토{% endblock %}
+{% block head %}{% if processing %}<meta http-equiv="refresh" content="2">{% endif %}{% endblock %}
+{% block content %}
+<div class="reading-page">
+<p>현재 상태: {{ publication.get_state_display }}{% if publication.abandoned_at %} · 남은 발행 포기{% endif %}</p>
+<p>{{ publication.bundle.summary }}</p>
+<p><a href="{% url 'artifacts:detail' publication.bundle_id %}">변경 내역·전체 diff·실제 검증 결과 확인</a></p>
+<dl>
+<dt>대상 저장소</dt><dd>{{ publication.snapshot.policy.repository_full_name }}</dd>
+<dt>기준 브랜치 / 커밋</dt><dd>{{ publication.snapshot.policy.base_branch }} / {{ publication.snapshot.baseline_commit_sha }}</dd>
+<dt>생성 브랜치</dt><dd>{{ publication.snapshot.branch }}</dd>
+<dt>승인할 커밋</dt><dd>{{ publication.snapshot.commit_sha }}</dd>
+<dt>발행 범위</dt><dd>{{ publication.snapshot.policy.mode }}</dd>
+<dt>대상 스냅샷</dt><dd>{{ publication.snapshot_hash }}</dd>
+<dt>마지막 원격 관측</dt><dd>{{ publication.last_observed_at|default:"관측 전" }} / {{ publication.last_observed_base_sha }}</dd>
+</dl>
+<p>변경 코드·커밋 정보가 GitHub로 전송됩니다. Draft PR에는 결과 요약이 포함되며 원격 CI가 실행될 수 있습니다. merge나 배포는 수행하지 않습니다.</p>
+{% if publication.remote_branch_sha %}<p>관측한 원격 커밋: {{ publication.remote_branch_sha }}</p>{% endif %}
+{% if publication.remote_pr_url %}<p><a href="{{ publication.remote_pr_url }}" rel="noreferrer">관측한 PR</a></p>{% endif %}
+{% if publication.error_code %}<p>확인 필요: {{ publication.error_code }}</p>{% endif %}
+{% if admin and not publication.abandoned_at %}
+<form class="form-stack" method="post" inert data-confirm="선택한 발행 작업을 진행할까요?" data-confirm-fields="reason">{% csrf_token %}{% include "includes/form_fields.html" %}
+{% if publication.state == "PENDING_APPROVAL" %}
+<button formaction="{% url 'approvals:action' publication.id 'approve' %}" data-confirm="승인 후 GitHub에 변경 코드·커밋을 전송하고 설정에 따라 Draft PR을 만들까요? 원격 CI가 실행될 수 있습니다.">승인 후 발행</button>
+<button class="secondary" formaction="{% url 'approvals:action' publication.id 'reject' %}" data-confirm="이번 발행을 거절할까요? 변경 코드는 원격에 발행하지 않습니다.">발행 거절</button>
+{% elif publication.state == "PARTIAL" or publication.state == "UNKNOWN" or publication.state == "FAILED" or publication.state == "INVALIDATED" %}
+<button class="secondary" formaction="{% url 'approvals:action' publication.id 'reconcile' %}" data-confirm="GitHub의 실제 브랜치·PR 상태를 다시 조회할까요?">원격 사실 다시 확인</button>
+{% if publication.reconciled_at and publication.state != "UNKNOWN" %}
+{% if publication.state == "PARTIAL" %}<button formaction="{% url 'approvals:action' publication.id 'remaining' %}" data-confirm="이미 생성된 브랜치를 유지하고 남은 Draft PR 생성만 승인할까요?">남은 PR만 새 승인</button>{% endif %}
+{% if publication.state == "FAILED" %}<button formaction="{% url 'approvals:action' publication.id 'retry' %}" data-confirm="같은 대상의 원격 발행을 다시 승인할까요? GitHub에 변경이 전송될 수 있습니다.">같은 대상을 새 승인하고 재시도</button>{% endif %}
+<button class="secondary" formaction="{% url 'approvals:action' publication.id 'abandon' %}" data-confirm="남은 발행을 포기할까요? 이미 발생한 원격 변경은 되돌리지 않습니다.">사유를 기록하고 남은 발행 포기</button>
+{% endif %}
+{% endif %}
+</form>
+{% endif %}
+<h2>결정 이력</h2>
+{% for approval in publication.approvals.all %}<p>{{ approval.decided_at }} · {{ approval.actor.display_name }} · {{ approval.decision }} · {{ approval.scope }}{% if not approval.valid %} · 무효: {{ approval.invalid_reason }}{% endif %}</p>{% empty %}<p>아직 사람의 결정이 없습니다.</p>{% endfor %}
+</div>
+{% endblock %}

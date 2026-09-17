@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ work_request.title }}{% endblock %}
+{% block content %}
+<div class="reading-page request-workspace">
+<ol class="workflow-steps" aria-label="작업 흐름"><li>요청 분석</li><li>명세 확인</li><li>수정·검증</li><li>사용자 결과 확인</li><li>관리자 승인</li></ol>
+{% if latest_run %}<section class="result-review"><div class="section-heading"><p><strong>{% if result_review %}{{ result_review.get_state_display }}{% elif latest_run.status == 'SUCCEEDED' %}사용자 결과 확인 대기{% else %}{{ latest_run.get_status_display }}{% endif %}</strong></p>{% if latest_run.result_bundle_id %}<a class="button" href="{% url 'artifacts:detail' latest_run.result_bundle_id %}">수정 결과 확인</a>{% else %}<a class="button secondary" href="{% url 'runs:detail' latest_run.id %}">실행 상태 확인</a>{% endif %}</div></section>{% endif %}
+<div class="section-heading"><p>{{ work_request.project.name }} · <span class="status">{{ work_request.get_state_display }}</span> · 초안 {{ work_request.draft_version }}</p><a href="{% url 'conversations:detail' work_request.conversation_id %}">원래 대화</a></div>
+<p class="helptext">초안 저장·명세 확인만으로 코드는 수정되지 않습니다 실행 중인 작업의 명세는 유지됩니다</p>
+{% if can_edit %}
+<details class="workflow-section" {% if work_request.draft_version > 1 and work_request.state == 'DRAFT' %}open{% endif %}><summary>명세 보완</summary>
+<form class="form-stack" method="post" action="{% url 'work_requests:draft' work_request.id %}">{% csrf_token %}{% include "includes/form_fields.html" %}<button>초안 저장</button></form>
+<form method="post" action="{% url 'work_requests:clarify' work_request.id %}" inert data-confirm="선택한 요청 작업을 진행할까요?">{% csrf_token %}<input type="hidden" name="expected_draft_version" value="{{ work_request.draft_version }}"><input type="hidden" name="idempotency_key" value="{{ operation_key }}"><button data-confirm="저장된 명세로 AI 제안을 요청할까요? 자료가 모델에 전달되고 이용량이 발생할 수 있습니다.">저장한 내용으로 AI 제안 받기</button></form>
+</details>{% else %}<section class="workflow-section"><h2>저장된 명세</h2><dl>{% for row in saved_rows %}<dt>{{ row.label }}</dt><dd class="message">{{ row.value|default:'없음' }}</dd>{% endfor %}</dl><p>읽기 전용 요청입니다.</p></section>{% endif %}
+<section class="workflow-section"><h2>AI 명세 제안</h2>
+{% if suggestions.0.invocation.state == 'QUEUED' or suggestions.0.invocation.state == 'RUNNING' %}<p id="suggestion-progress" role="status" data-url="{% url 'work_requests:progress' work_request.id %}">AI가 요구사항과 영향 범위를 확인하고 있습니다</p><a id="suggestion-refresh" hidden href="{% url 'work_requests:detail' work_request.id %}">작성 내용을 저장한 뒤 새 제안 확인</a>{% endif %}
+{% for suggestion in suggestions %}
+<details {% if forloop.first and not suggestion.applied_at %}open{% endif %}><summary>초안 {{ suggestion.source_draft_version }} 기준 · {{ suggestion.invocation.get_state_display|default:suggestion.invocation.state }}</summary>
+{% if suggestion.proposed_fields %}<dl>{% for row in suggestion.display_rows %}<dt>{{ row.label }}</dt><dd class="message">{{ row.value|default:'없음' }}</dd>{% endfor %}</dl>
+{% if can_edit and suggestion.source_draft_version == work_request.draft_version and not suggestion.applied_at %}<form method="post" action="{% url 'work_requests:apply_suggestion' work_request.id suggestion.id %}" inert data-confirm="선택한 요청 작업을 진행할까요?">{% csrf_token %}<input type="hidden" name="expected_draft_version" value="{{ work_request.draft_version }}"><button data-confirm="AI 제안을 현재 초안에 반영할까요? 변경 내용을 확인한 뒤 별도로 실행할 수 있습니다.">이 제안을 초안에 반영</button></form>{% else %}<p>이전 초안에 대한 제안이며 현재 내용을 자동으로 바꾸지 않습니다.</p>{% endif %}
+{% else %}<p>제안을 아직 완료하지 못했습니다. 대기 중에는 잠시 후 화면을 새로 열어 주세요. 실패 시 새 제안을 명시적으로 요청할 수 있습니다.</p>{% endif %}</details>
+{% empty %}<p class="empty-note">제안이 없습니다</p>{% endfor %}</section>
+{% if can_edit %}
+<section class="workflow-section"><h2>명세 확인</h2>
+<p>위 폼에서 수정했다면 먼저 초안을 저장하세요. 아래 확인은 서버에 저장된 초안 {{ work_request.draft_version }}에만 적용됩니다.</p>
+<details><summary>확인할 저장된 명세 전체 보기</summary><dl>{% for row in saved_rows %}<dt>{{ row.label }}</dt><dd class="message">{{ row.value|default:'없음' }}</dd>{% endfor %}</dl></details>
+<p>원본의 커밋된 코드에서 별도 작업 사본을 만듭니다. 원본의 미커밋 변경은 보존하고 작업 입력에서 제외합니다.</p>
+{% if basis %}
+<details><summary>현재 준비 기준</summary><p>설정 v{{ basis.config_revision.project_config_version }} · 코드 {{ basis.base_commit_sha }}</p></details>
+<form method="post" action="{% url 'work_requests:ready' work_request.id %}" inert data-confirm="선택한 요청 작업을 진행할까요?">{% csrf_token %}
+<input type="hidden" name="expected_draft_version" value="{{ work_request.draft_version }}"><input type="hidden" name="expected_project_config_version" value="{{ basis.config_revision.project_config_version }}"><input type="hidden" name="expected_base_commit_sha" value="{{ basis.base_commit_sha }}"><button data-confirm="서버에 저장된 초안을 확정할까요? 아직 수정 작업은 시작하지 않습니다.">이 명세로 준비</button></form>
+{% else %}<p role="status">{{ basis_error|default:'프로젝트 준비가 필요합니다. 관리자에게 문의하세요.' }}</p>{% endif %}
+<form method="post" action="{% url 'work_requests:refresh_basis' work_request.id %}">{% csrf_token %}<input type="hidden" name="expected_draft_version" value="{{ work_request.draft_version }}"><input type="hidden" name="idempotency_key" value="{{ operation_key }}"><button>준비 기준 새로고침</button></form>
+</section>
+{% if work_request.state == 'READY' %}
+<section class="workflow-section"><h2>수정 작업 시작</h2><p>확인한 명세 v{{ work_request.ready_revision.number }}로 실행합니다. 코드·자료는 로그인된 Codex를 통해 외부 모델에 전달됩니다. 이 동작은 push·PR 발행 승인이 아닙니다.</p>
+<form method="post" action="{% url 'work_requests:submit' work_request.id %}" inert data-confirm="선택한 요청 작업을 진행할까요?">{% csrf_token %}<input type="hidden" name="revision_id" value="{{ work_request.ready_revision_id }}"><input type="hidden" name="idempotency_key" value="{{ submission_key }}"><button data-confirm="확인한 명세로 코드 수정을 시작할까요? 코드·자료가 Codex 모델에 전달되고 이용량이 발생합니다. push·PR은 별도 승인입니다.">수정 작업 시작</button></form>
+</section>{% endif %}
+{% endif %}
+<section class="workflow-section"><h2>확정 명세와 실행 이력</h2>
+{% for revision in revisions %}<details><summary>명세 v{{ revision.number }} · {{ revision.confirmed_at }}</summary><dl>{% for row in revision.display_rows %}<dt>{{ row.label }}</dt><dd class="message">{{ row.value|default:'없음' }}</dd>{% endfor %}</dl>{% if revision.submission %}<p><a href="/runs/{{ revision.submission.primary_run_id }}/">처음 실행 · {{ revision.submission.primary_run.get_status_display }}</a></p>{% else %}<p>아직 실행하지 않은 명세입니다.</p>{% endif %}</details>{% empty %}<p class="empty-note">아직 확인한 명세가 없습니다</p>{% endfor %}</section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/request-progress.js' %}" defer></script>{% endblock %}
